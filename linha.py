@@ -47,11 +47,10 @@ def carregar_dados():
     df_total = pd.concat(dfs, ignore_index=True)
 
     # Colunas que serão somadas
-   # Atualize esta linha dentro de carregar_dados()
     cols_to_sum = ['GOLS', 'ASSISTENCIAS', 'MINUTOS EM CAMPO', 'FINALIZAÇÕES', 
                    'PASSES', 'PASSES CERTOS', 'CRUZAMENTOS', 'CRUZAMENTOS CERTOS',
                    'PERDAS DE POSSE', 'RECUPERAÇÕES DE BOLA', 'DESARMES', 
-                   'DUELOS', 'DUELOS GANHOS']
+                   'DUELOS', 'DUELOS GANHOS', 'INTERCEPTAÇÕES']
     
     # Garantir que as colunas são numéricas e limpar caracteres estranhos
     for col in cols_to_sum:
@@ -90,14 +89,14 @@ else:
     """)
     st.divider()
 
-    # 4. Barra Lateral (Sidebar) para Filtros
+    # 4. Barra Lateral para Filtros
     st.sidebar.header("⚙️ Configurações e Filtros")
     
     metrica_selecionada = st.sidebar.selectbox(
         "Selecione a métrica de destaque:",
         ['MINUTOS EM CAMPO', 'GOLS', 'ASSISTENCIAS', 'FINALIZAÇÕES', 
          'PASSES', 'PASSES CERTOS', 'CRUZAMENTOS', 'CRUZAMENTOS CERTOS',
-         'DESARMES', 'RECUPERAÇÕES DE BOLA', 'PERDAS DE POSSE']
+         'DESARMES', 'RECUPERAÇÕES DE BOLA', 'PERDAS DE POSSE', 'INTERCEPTAÇÕES']
     )
 
     minutos_minimos = st.sidebar.slider(
@@ -112,20 +111,22 @@ else:
     # Aplica o filtro de minutos
     df_filtrado = df[df['MINUTOS EM CAMPO'] >= minutos_minimos]
 
-    # 5. Organização da tela em colunas para os "Cards" (Métricas rápidas)
+    # 5. Organização da tela em colunas para os cards
     st.subheader("📌 Destaques Gerais")
     col1, col2, col3, col4 = st.columns(4)
     
-    # Encontrar os líderes
+    # Encontrando os líderes das métricas em destaque
     lider_minutos = df_filtrado.loc[df_filtrado['MINUTOS EM CAMPO'].idxmax()]
     lider_gols = df_filtrado.loc[df_filtrado['GOLS'].idxmax()]
     lider_assist = df_filtrado.loc[df_filtrado['ASSISTENCIAS'].idxmax()]
-    lider_passes = df_filtrado.loc[df_filtrado['PASSES'].idxmax()]
+    df_filtrado['PORCENTAGEM ACERTO'] = (df_filtrado['PASSES CERTOS'] / df_filtrado['PASSES']) * 100
+    lider_precisao = df_filtrado.loc[df_filtrado['PORCENTAGEM ACERTO'].idxmax()]
+  
 
     col1.metric("Mais Minutos", f"{lider_minutos['JOGADORES']}", f"{int(lider_minutos['MINUTOS EM CAMPO'])} min")
     col2.metric("Artilheiro", f"{lider_gols['JOGADORES']}", f"{int(lider_gols['GOLS'])} Gols")
     col3.metric("Garçom", f"{lider_assist['JOGADORES']}", f"{int(lider_assist['ASSISTENCIAS'])} Asts")
-    col4.metric("Maior passador", f"{lider_passes['JOGADORES']}", f"{int(lider_passes['PASSES'])} Passes")
+    col4.metric("Passes mais precisos", f"{lider_precisao['JOGADORES']}", f"{lider_precisao['PORCENTAGEM ACERTO']:.1f}% de acerto")
 
     st.divider()
 
@@ -152,7 +153,7 @@ else:
     st.subheader("🎯 Correlação e Eficiência")
     st.markdown("Analise a taxa de conversão e eficiência dos jogadores. Bolhas maiores indicam mais minutos em campo.")
     
-    # Dicionário com os atalhos que você pediu
+    # Dicionário com os atalhos de correlações entre estatisticas
     correlacoes = {
         "Duelos: Totais x Ganhos": ("DUELOS", "DUELOS GANHOS"),
         "Posse: Perdas x Recuperações": ("PERDAS DE POSSE", "RECUPERAÇÕES DE BOLA"),
@@ -168,7 +169,7 @@ else:
     # Lista de todas as colunas para o modo manual
     todas_metricas = ['GOLS', 'ASSISTENCIAS', 'FINALIZAÇÕES', 'PASSES', 'PASSES CERTOS', 
                       'CRUZAMENTOS', 'CRUZAMENTOS CERTOS', 'PERDAS DE POSSE', 
-                      'RECUPERAÇÕES DE BOLA', 'DESARMES', 'DUELOS', 'DUELOS GANHOS']
+                      'RECUPERAÇÕES DE BOLA', 'DESARMES', 'DUELOS', 'DUELOS GANHOS', 'INTERCEPTAÇÕES']
 
     # Lógica para definir X e Y
     if tipo_analise == "Livre (Escolha Manual)":
@@ -197,8 +198,8 @@ else:
     fig_scatter.update_traces(textposition='top center')
     fig_scatter.update_layout(showlegend=False, height=600) # Deixei o gráfico um pouco mais alto para os nomes não se sobreporem tanto
     
-    # Adicionando uma linha de tendência ideal (opcional, deixa o gráfico mais rico)
-    # Se X for igual a Y (100% de acerto), a linha mostra quem está mais próximo da perfeição
+    # Adicionando uma linha de tendência ideal
+    # A linha mostra quem está mais próximo da perfeição
     if tipo_analise != "Livre (Escolha Manual)" and tipo_analise != "Posse: Perdas x Recuperações":
          fig_scatter.add_shape(
             type="line", line=dict(dash="dash", color="gray", width=1),
